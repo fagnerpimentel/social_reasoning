@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+
+  <node name="social_reasoning_node" pkg="social_reasoning" type="social_reasoning_node" output="screen"/>
+
+</launch>
