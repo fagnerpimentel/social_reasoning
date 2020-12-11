@@ -2,12 +2,14 @@
 
 #include "social_msgs/People.h"
 #include "social_msgs/Objects.h"
+#include "social_msgs/Locals.h"
 #include "social_msgs/PointArray.h"
 
 #include <geometry_msgs/Point.h>
 
 #include "social_reasoning/Person.h"
 #include "social_reasoning/Object.h"
+#include "social_reasoning/Local.h"
 
 #include <visualization_msgs/Marker.h>
 
@@ -17,6 +19,7 @@
 
 std::vector<social_reasoning::Person> people;
 std::vector<social_reasoning::Object> objects;
+std::vector<social_reasoning::Local> locals;
 
 void peopleCallback(const social_msgs::People::ConstPtr& msg)
 {
@@ -64,6 +67,28 @@ void objectsCallback(const social_msgs::Objects::ConstPtr& msg)
   }
 }
 
+void localsCallback(const social_msgs::Locals::ConstPtr& msg)
+{
+  // ROS_INFO("locals %i", (int)msg->locals.size());
+  for (size_t i = 0; i < msg->locals.size(); i++) {
+    std::string name = msg->locals[i].name;
+    geometry_msgs::Pose pose = msg->locals[i].pose;
+
+    std::vector<social_reasoning::Local>::iterator it = find_if(locals.begin(), locals.end(),
+      boost::bind(&social_reasoning::Local::isName, boost::placeholders::_1, name));
+
+    if (it != locals.end())
+    {
+      (*it).setPosition(pose);
+    }
+    else
+    {
+      social_reasoning::Local local(name, pose);
+      locals.push_back(local);
+    }
+  }
+}
+
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "social_reasoning_node");
@@ -73,6 +98,7 @@ int main(int argc, char **argv)
 
   ros::Subscriber sub_people = n.subscribe("people", 1000, peopleCallback);
   ros::Subscriber sub_objects = n.subscribe("objects", 1000, objectsCallback);
+  ros::Subscriber sub_locals = n.subscribe("locals", 1000, localsCallback);
 
   ros::Publisher pub_marker = n.advertise<visualization_msgs::Marker>("social_marker", 1);
 
@@ -156,8 +182,7 @@ int main(int argc, char **argv)
 
     for (size_t i = 0; i < objects.size(); i++) {
       visualization_msgs::Marker marker;
-      // Set the frame ID and timestamp.      layer_points_interaction.points.push_back(p_interacao);
-
+      // Set the frame ID and timestamp.
       marker.header.frame_id = "/map";
       marker.header.stamp = ros::Time::now();
       // Set the namespace and id for this marker.
@@ -188,6 +213,35 @@ int main(int argc, char **argv)
       geometry_msgs::Point p_object;
       p_object = objects[i].getPose().position;
       layer_points_objects.points.push_back(p_object);
+    }
+
+    for (size_t i = 0; i < locals.size(); i++) {
+      visualization_msgs::Marker marker;
+      // Set the frame ID and timestamp.
+      marker.header.frame_id = "/map";
+      marker.header.stamp = ros::Time::now();
+      // Set the namespace and id for this marker.
+      marker.ns = "locals";
+      marker.id = i;
+      // Set the marker type.
+      marker.type = visualization_msgs::Marker::CYLINDER;
+      // Set the marker action.  Options are ADD, DELETE, and DELETEALL
+      marker.action = visualization_msgs::Marker::ADD;
+      // Set the pose of the marker.
+      marker.pose = locals[i].getPose();
+      // Set the scale of the marker -- 1x1x1 here means 1m on a side
+      marker.scale.x = 1.0;
+      marker.scale.y = 1.0;
+      marker.scale.z = 0.2;
+      // Set the color -- be sure to set alpha to something non-zero!
+      marker.color.r = 0.0f;
+      marker.color.g = 1.0f;
+      marker.color.b = 0.0f;
+      marker.color.a = 0.5;
+      // lifetime
+      marker.lifetime = ros::Duration();
+      pub_marker.publish(marker);
+
     }
 
     int i = 0;
@@ -305,9 +359,11 @@ int main(int argc, char **argv)
     pub_layer_points_interaction.publish(layer_points_interaction);
 
     ros::spinOnce();
-    // r.sleep();
   }
-  // ros::spin();
+
+
+
+
 
   return 0;
 }
