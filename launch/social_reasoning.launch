@@ -1,6 +1,10 @@
 <?xml version="1.0"?>
 <launch>
 
-  <node name="social_reasoning_node" pkg="social_reasoning" type="social_reasoning_node" output="screen"/>
+  <arg name="db_path_input" default="$(find social_reasoning)/ontology_input.db"/>
+
+  <node name="social_reasoning" pkg="social_reasoning" type="social_reasoning.py" output="screen">
+    <param name="database_input" value="$(arg db_path_input)"/>
+  </node>
 
 </launch>
