@@ -4,11 +4,13 @@ import numpy
 import rospy
 
 from util import *
+from rules import *
 from db_manager import DBManager
 
 from geometry_msgs.msg import Point
 from std_msgs.msg import Header
 from std_msgs.msg import ColorRGBA
+from std_srvs.srv import Empty, EmptyResponse
 
 from social_msgs.msg import People, Person
 from social_msgs.msg import Objects, Objects
@@ -21,7 +23,7 @@ class SocialReasoning(object):
     """docstring for SocialReasoning."""
     def __init__(self):
 
-        self.rate = rospy.Rate(10)
+        self.rate = rospy.Rate(25)
         self.interaction_distance = 2.5
         self.interaction_point_distance = 0.1
 
@@ -36,7 +38,7 @@ class SocialReasoning(object):
 
         # get database
         db_path_input = rospy.get_param('~database_input')
-        db_path_output = 'output.db'
+        db_path_output = '{}.out.db'.format(db_path_input)
         self.db_manager = DBManager(db_path_input, db_path_output)
 
         # Subscribers
@@ -57,6 +59,7 @@ class SocialReasoning(object):
 
         # servive servers
         rospy.Service('~get_destination', DestinationArray, self.handle_getdestination_srv)
+        rospy.Service('~clear_people', Empty, self.handle_clearpeople_srv)
         rospy.loginfo('All service servers ready.')
 
         self.start()
@@ -76,7 +79,8 @@ class SocialReasoning(object):
     def handle_getdestination_srv(self,req):
         dar = DestinationArrayResponse()
 
-        locals = self.db_manager.get_locals_by_name(req.name)
+        # locals = self.db_manager.get_locals_by_name(req.name)
+        locals = [local for local in self.locals if local.name == req.name]
         for local in locals:
             d = Destination()
             d.name = local.name
@@ -84,7 +88,8 @@ class SocialReasoning(object):
             d.pose = local.pose
             dar.destination_list.append(d)
 
-        people = self.db_manager.get_people_by_name(req.name)
+        # people = self.db_manager.get_people_by_name(req.name)
+        people = [person for person in self.people if person.name == req.name]
         for person in people:
             d = Destination()
             d.name = person.name
@@ -94,19 +99,32 @@ class SocialReasoning(object):
 
         return dar
 
+    def handle_clearpeople_srv(self,req):
+        er = EmptyResponse()
+        self.db_manager.clear_people()
+        return er
+
     def update_database(self):
 
-        # self.db_manager.clear_people()
+        # self.locals = self.db_manager.update_locals(self.locals_data)
+        # self.objects = self.db_manager.update_objects(self.objects_data)
+        # self.people = self.db_manager.update_people(self.people_data)
+        #
+        # self.locals = self.db_manager.update_locals(self.locals)
+        # self.objects = self.db_manager.update_objects(self.objects)
+        # self.people = self.db_manager.update_people(self.people)
+        #
+        # self.locals_data = []
+        # self.objects_data = []
+        # self.people_data = []
 
-        self.locals = self.db_manager.update_locals(self.locals_data)
-        self.people = self.db_manager.update_people(self.people_data)
-        self.objects = self.db_manager.update_objects(self.objects_data)
+        self.locals = self.locals_data
+        self.objects = self.objects_data
+        self.people = self.people_data
+        for person in self.people:
+            person.pose_approach = get_approach_pose(person)
+            person.proxemic = get_proxemic()
 
-        # self.people = self.leg_data
-
-        self.locals_data = []
-        self.objects_data = []
-        self.people_data = []
 
     def publish(self):
 
@@ -279,7 +297,6 @@ class SocialReasoning(object):
     def start(self):
         while not rospy.is_shutdown():
             self.update_database()
-            # self.reasoning()
             self.publish()
             self.rate.sleep()
 

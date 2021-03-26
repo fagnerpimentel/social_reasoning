@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import time
 import rospy
 import shutil
 import sqlite3
@@ -18,40 +19,62 @@ class DBManager:
         self.db_path_output = _db_path_output
         shutil.copyfile(self.db_path_input,self.db_path_output)
         rospy.loginfo('Using "{}" database.'.format(self.db_path_output))
+        self.lock = False
+
+    def open_db(self):
+        while self.lock:
+            time.sleep(0.001)
+        self.lock = True
+
+        return sqlite3.connect(self.db_path_output)
+
+    def close_db(self, db):
+        db.commit()
+        db.close()
+        self.lock = False
 
     def clear_locals(self):
-        db = sqlite3.connect(self.db_path_output)
+        # db = sqlite3.connect(self.db_path_output)
+        db = self.open_db()
         cursor = db.cursor()
+
 
         query = '''DELETE FROM locals;'''
         cursor.execute(query)
 
-        db.commit()
-        db.close()
+        # db.commit()
+        # db.close()
+        self.close_db(db)
 
     def clear_objects(self):
-        db = sqlite3.connect(self.db_path_output)
+        # db = sqlite3.connect(self.db_path_output)
+        db = self.open_db()
         cursor = db.cursor()
 
         query = '''DELETE FROM objects;'''
         cursor.execute(query)
 
-        db.commit()
-        db.close()
+        # db.commit()
+        # db.close()
+        close_db(db)
 
     def clear_people(self):
-        db = sqlite3.connect(self.db_path_output)
+        # db = sqlite3.connect(self.db_path_output)
+        db = self.open_db()
         cursor = db.cursor()
 
         query = '''DELETE FROM person;'''
         cursor.execute(query)
 
-        db.commit()
-        db.close()
+        # db.commit()
+        # db.close()
+        self.close_db(db)
+
         return locals
 
     def get_locals_by_name(self, _name):
-        db = sqlite3.connect(self.db_path_output)
+        # db = sqlite3.connect(self.db_path_output)
+        db = self.open_db()
         cursor = db.cursor()
 
         query = '''
@@ -77,12 +100,15 @@ class DBManager:
             local.pose.orientation.w = float(s[6])
             locals.append(local)
 
-        db.commit()
-        db.close()
+        # db.commit()
+        # db.close()
+        self.close_db(db)
+
         return locals
 
     def get_people_by_name(self, _name):
-        db = sqlite3.connect(self.db_path_output)
+        # db = sqlite3.connect(self.db_path_output)
+        db = self.open_db()
         cursor = db.cursor()
 
         query = '''
@@ -108,14 +134,17 @@ class DBManager:
             person.pose.orientation.w = float(s[6])
             people.append(person)
 
-        db.commit()
-        db.close()
+        # db.commit()
+        # db.close()
+        self.close_db(db)
+
         return people
 
     def update_locals(self, locals_input):
         locals_output = []
 
-        db = sqlite3.connect(self.db_path_output)
+        # db = sqlite3.connect(self.db_path_output)
+        db = self.open_db()
         cursor = db.cursor()
 
         for local in locals_input:
@@ -152,8 +181,9 @@ class DBManager:
         locals_name = [row[0].encode("utf-8") for row in locals_result]
         locals_pose = [row[1].encode("utf-8") for row in locals_result]
 
-        db.commit()
-        db.close()
+        # db.commit()
+        # db.close()
+        self.close_db(db)
 
         for i in range(locals_qtde):
             s = locals_pose[i].split()
@@ -172,7 +202,8 @@ class DBManager:
     def update_objects(self, objects_input):
         objects_output = []
 
-        db = sqlite3.connect(self.db_path_output)
+        # db = sqlite3.connect(self.db_path_output)
+        db = self.open_db()
         cursor = db.cursor()
 
         for object in objects_input:
@@ -208,8 +239,9 @@ class DBManager:
         objects_pose = [row[1].encode("utf-8") for row in objects_result]
         objects_type = [row[2].encode("utf-8") for row in objects_result]
 
-        db.commit()
-        db.close()
+        # db.commit()
+        # db.close()
+        self.close_db(db)
 
         for i in range(objects_qtde):
             s = objects_pose[i].split()
@@ -228,7 +260,8 @@ class DBManager:
 
     def update_people(self, people_input):
         people_output = []
-        db = sqlite3.connect(self.db_path_output)
+        # db = sqlite3.connect(self.db_path_output)
+        db = self.open_db()
         cursor = db.cursor()
 
         for person in people_input:
@@ -288,8 +321,9 @@ class DBManager:
         # people_person_interaction = [row[2].encode("utf-8") for row in people_result]
         # people_object_interaction = [row[3].encode("utf-8") for row in people_result]
 
-        db.commit()
-        db.close()
+        # db.commit()
+        # db.close()
+        self.close_db(db)
 
         for i in range(people_qtde):
             spo = people_pose[i].split()

@@ -41,8 +41,8 @@ def init_service_client(_topic, _msg_type):
     return rospy.ServiceProxy(_topic, _msg_type)
 def init_action_server(_topic, _msg_type, _callback):
     rospy.loginfo('Starting action server: {}'.format(_topic))
-    action = actionlib.SimpleActionServer(_topic, _msg_type, _callback)
-    action.start()
+    action = actionlib.SimpleActionServer(_topic, _msg_type, _callback, auto_start = False)
+    # action.start()
     return action
 def init_action_client(_topic, _msg_type):
     rospy.loginfo('Starting action client: {}'.format(_topic))
